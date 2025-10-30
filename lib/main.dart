@@ -33,18 +33,50 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   Future<void> uploadFile() async {
+    print("📱 Starting file picker...");
     final result = await FilePicker.platform.pickFiles();
-    if (result == null) return;
+    if (result == null) {
+      print("❌ No file selected");
+      return;
+    }
 
+    print("📂 File selected: ${result.files.single.name}");
     final file = File(result.files.single.path!);
 
-    // Replace with your Windows IP from the Flask output
-    final uri = Uri.parse("http://192.168.0.105:5000/upload");
+    // Using the computer's IP address
+    final uri = Uri.parse("http://10.238.112.65:5000/upload");
+    print("🌐 Uploading to: $uri");
 
-    var request = http.MultipartRequest('POST', uri)
-      ..files.add(await http.MultipartFile.fromPath('file', file.path));
+    try {
+      var request = http.MultipartRequest('POST', uri)
+        ..files.add(await http.MultipartFile.fromPath('file', file.path));
 
-    var response = await request.send();
+      print("📤 Sending request...");
+      var response = await request.send();
+
+      if (response.statusCode == 200) {
+        print("✅ Upload successful!");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("✅ File uploaded successfully")),
+          );
+        }
+      } else {
+        print("❌ Upload failed with status: ${response.statusCode}");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("❌ Upload failed: ${response.statusCode}")),
+          );
+        }
+      }
+    } catch (e) {
+      print("❌ Error during upload: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("❌ Upload error: $e")),
+        );
+      }
+    }
 
     if (response.statusCode == 200) {
       // Show success message
