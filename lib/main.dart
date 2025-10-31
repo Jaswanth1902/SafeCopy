@@ -77,19 +77,75 @@ class _MyHomePageState extends State<MyHomePage> {
         );
       }
     }
+  }
 
-    if (response.statusCode == 200) {
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("✅ File uploaded successfully")),
-        );
+  // Server base URL — adjust if the Flask server is on another machine
+  final String serverBase = "http://127.0.0.1:5000";
+
+  Future<List<String>> fetchFileList() async {
+    try {
+      final uri = Uri.parse('$serverBase/files');
+      final resp = await http.get(uri);
+      if (resp.statusCode == 200) {
+        // Decode a simple JSON map {"files": [...]} without adding extra deps
+        final body = resp.body;
+        // crude parsing to avoid importing dart:convert for this small app
+        final filesStart = body.indexOf('[');
+        final filesEnd = body.indexOf(']');
+        if (filesStart != -1 && filesEnd != -1 && filesEnd > filesStart) {
+          final listContent = body.substring(filesStart + 1, filesEnd);
+          if (listContent.trim().isEmpty) return [];
+          final parts = listContent.split(',').map((s) {
+            return s.trim().replaceAll('"', '').replaceAll("'", '');
+          }).toList();
+          return parts.map((p) => p.trim()).toList();
+        }
       }
-    } else {
-      // Show error message
+      return [];
+    } catch (e) {
+      print('❌ Error fetching file list: $e');
+      return [];
+    }
+  }
+
+  Future<void> downloadFile(String filename) async {
+    try {
+      final uri =
+          Uri.parse('$serverBase/files/${Uri.encodeComponent(filename)}');
+      print('⬇️ Downloading from $uri');
+      final resp = await http.get(uri);
+      if (resp.statusCode == 200) {
+        String downloadsDir;
+        if (Platform.isWindows) {
+          final user = Platform.environment['USERPROFILE'] ?? '';
+          downloadsDir = '$user\\Downloads';
+        } else {
+          downloadsDir = Directory.systemTemp.path;
+        }
+
+        final outPath = '$downloadsDir\\$filename';
+        final outFile = File(outPath);
+        await outFile.create(recursive: true);
+        await outFile.writeAsBytes(resp.bodyBytes);
+        print('✅ Saved to $outPath');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('✅ Saved to $outPath')),
+          );
+        }
+      } else {
+        print('❌ Download failed: ${resp.statusCode}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('❌ Download failed: ${resp.statusCode}')),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Error downloading file: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Upload failed: ${response.statusCode}")),
+          SnackBar(content: Text('❌ Error downloading: $e')),
         );
       }
     }
@@ -106,12 +162,46 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             const Text(
-              'Click the button below to upload a file:',
+              'Upload to server or download files from the server:',
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: uploadFile,
               child: const Text('Upload File'),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () async {
+                final files = await fetchFileList();
+                if (files.isEmpty) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('No files available on server')),
+                    );
+                  }
+                  return;
+                }
+
+                // Show a dialog to pick a file to download
+                showDialog(
+                    context: context,
+                    builder: (ctx) {
+                      return SimpleDialog(
+                        title: const Text('Files on server'),
+                        children: files
+                            .map((f) => SimpleDialogOption(
+                                  onPressed: () {
+                                    Navigator.of(ctx).pop();
+                                    downloadFile(f);
+                                  },
+                                  child: Text(f),
+                                ))
+                            .toList(),
+                      );
+                    });
+              },
+              child: const Text('Download From Server'),
             ),
           ],
         ),
