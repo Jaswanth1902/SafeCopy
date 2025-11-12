@@ -1,0 +1,84 @@
+name: secure_print_owner
+description: Secure File Printing System - Owner Windows Application
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  provider: ^6.0.0
+  riverpod: ^2.0.0
+  
+  # Networking
+  dio: ^5.0.0
+  http: ^1.0.0
+  
+  # Local Storage
+  flutter_secure_storage: ^9.0.0
+  shared_preferences: ^2.0.0
+  
+  # Encryption & Security
+  pointycastle: ^3.7.0
+  encrypt: ^4.0.0
+  
+  # File Handling
+  path_provider: ^2.0.0
+  
+  # UI & Navigation
+  go_router: ^10.0.0
+  flutter_animate: ^4.0.0
+  
+  # Windows-specific
+  win32: ^4.0.0
+  windows_taskbar: ^1.0.0
+  
+  # Printing
+  pdf: ^3.10.0
+  print_plus: ^1.0.0
+  
+  # Date & Time
+  intl: ^0.19.0
+  
+  # Logging
+  logger: ^2.0.0
+  
+  # JSON Serialization
+  json_serializable: ^6.0.0
+  
+  # Utilities
+  connectivity_plus: ^5.0.0
+  uuid: ^4.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Linting
+  flutter_lints: ^3.0.0
+  
+  # Testing
+  mockito: ^5.0.0
+  
+  # Code Generation
+  build_runner: ^2.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/animations/
+    
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700

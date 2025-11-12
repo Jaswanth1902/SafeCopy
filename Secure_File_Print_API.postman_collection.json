@@ -1,0 +1,165 @@
+{
+  "info": {
+    "name": "Secure File Printing System - Simplified",
+    "description": "Testing endpoints for file upload, list, print, and delete",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List All Files",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5000/api/files",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "files"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Upload File (Encrypted)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "/path/to/your/encrypted/file.bin"
+            },
+            {
+              "key": "file_name",
+              "value": "document.pdf",
+              "type": "text"
+            },
+            {
+              "key": "iv_vector",
+              "value": "base64-encoded-iv-vector-here",
+              "type": "text",
+              "description": "Base64 encoded IV (16 bytes)"
+            },
+            {
+              "key": "auth_tag",
+              "value": "base64-encoded-auth-tag-here",
+              "type": "text",
+              "description": "Base64 encoded auth tag (16 bytes)"
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/upload",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "upload"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get File for Printing",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5000/api/print/{{file_id}}",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "print",
+            "{{file_id}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Delete File After Printing",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/delete/{{file_id}}",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "delete",
+            "{{file_id}}"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "file_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    }
+  ]
+}
