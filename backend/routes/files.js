@@ -32,8 +32,25 @@ router.post("/upload", verifyToken, upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "No file provided" });
     }
 
+    // File size validation (double check on server side)
+    const maxFileSize = 500 * 1024 * 1024; // 500MB
+    if (req.file.size > maxFileSize) {
+      return res.status(413).json({
+        error: "File too large",
+        max_size_mb: maxFileSize / (1024 * 1024),
+        file_size_mb: (req.file.size / (1024 * 1024)).toFixed(2),
+      });
+    }
+
     if (!req.body.file_name) {
       return res.status(400).json({ error: "file_name is required" });
+    }
+
+    if (!req.body.file_name.match(/^[\w\s.\-]+$/)) {
+      return res.status(400).json({
+        error: "file_name contains invalid characters",
+        allowed: "alphanumeric, spaces, dots, hyphens",
+      });
     }
 
     if (!req.body.iv_vector) {
@@ -105,10 +122,11 @@ router.post("/upload", verifyToken, upload.single("file"), async (req, res) => {
     });
   } catch (error) {
     console.error("Upload error:", error);
+    const isDev = process.env.NODE_ENV === "development";
     res.status(500).json({
       error: true,
-      message: "Failed to upload file",
-      details: error.message,
+      message: isDev ? error.message : "Failed to upload file",
+      ...(isDev && { details: error.stack }),
     });
   }
 });

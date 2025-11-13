@@ -8,6 +8,26 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const compression = require("compression");
 
+// ========================================
+// CONFIGURATION VALIDATION
+// ========================================
+
+// Validate critical environment variables at startup
+const requiredEnvVars = ["JWT_SECRET"];
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    throw new Error(`Critical: ${envVar} environment variable is not set`);
+  }
+  if (envVar === "JWT_SECRET" && process.env[envVar].length < 32) {
+    throw new Error("Critical: JWT_SECRET must be at least 32 characters");
+  }
+}
+
+// Validate CORS origin in production
+if (process.env.NODE_ENV === "production" && !process.env.CORS_ORIGIN) {
+  throw new Error("Critical: CORS_ORIGIN must be set in production environment");
+}
+
 // Initialize Express App
 const app = express();
 
@@ -43,6 +63,20 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// HTTPS Enforcement (production only)
+if (process.env.NODE_ENV === "production") {
+  app.use((req, res, next) => {
+    if (!req.secure && req.get("x-forwarded-proto") !== "https") {
+      return res.status(403).json({
+        error: true,
+        statusCode: 403,
+        message: "HTTPS is required",
+      });
+    }
+    next();
+  });
+}
 
 // Body Parser
 app.use(express.json({ limit: "100mb" }));
