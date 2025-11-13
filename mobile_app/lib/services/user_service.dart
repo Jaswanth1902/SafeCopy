@@ -80,8 +80,9 @@ class UserService {
   /// Check if user is authenticated
   Future<bool> isAuthenticated() async {
     final token = await getAccessToken();
-    return token != null && token.isNotEmpty;
-  }
+    if (token == null || token.isEmpty) return false;
+    return !isTokenExpired(token);
+  }  }
 
   /// Logout - clear all stored tokens
   Future<void> logout() async {

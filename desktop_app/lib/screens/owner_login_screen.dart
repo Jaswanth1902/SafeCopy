@@ -50,21 +50,32 @@ class _OwnerLoginScreenState extends State<OwnerLoginScreen> {
       );
 
       if (mounted) {
+        final ownerId = response.owner['owner_id'];
+        if (ownerId == null || ownerId is! String) {
+          setState(() {
+            _errorMessage = 'Login failed: Invalid or missing Owner ID in response';
+            _isLoading = false;
+          });
+          return;
+        }
         widget.onLoginSuccess(
           response.accessToken,
-          response.owner['owner_id'] ?? 'unknown',
+          ownerId as String,
         );
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Login failed: ${e.toString()}';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Login failed: ${e.toString()}';
+        });
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }  }
 
   @override
   Widget build(BuildContext context) {

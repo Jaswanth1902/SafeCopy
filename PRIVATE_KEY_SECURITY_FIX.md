@@ -20,13 +20,14 @@ res.status(201).json({
   accessToken,
   refreshToken,
   owner: { id: owner.id, email: owner.email, full_name: owner.full_name },
-  privateKey,  // ❌ CRITICAL: Private key exposed in response
+  privateKey, // ❌ CRITICAL: Private key exposed in response
 });
 ```
 
 **Risk Level:** 🔴 **CRITICAL**
 
 **Security Implications:**
+
 - Private key visible in HTTP response (could be logged by proxies/firewalls)
 - Private key could be captured in browser history
 - Private key exposed in application logs
@@ -47,6 +48,7 @@ res.status(201).json({
 **File:** `backend/routes/owners.js`
 
 **Changes:**
+
 - Removed server-side keypair generation
 - Added `public_key` parameter to request (client-generated)
 - Added validation for PEM format
@@ -54,6 +56,7 @@ res.status(201).json({
 - Added helpful security note in response
 
 **New Request Format:**
+
 ```json
 {
   "email": "owner@example.com",
@@ -64,6 +67,7 @@ res.status(201).json({
 ```
 
 **New Response Format:**
+
 ```json
 {
   "success": true,
@@ -82,6 +86,7 @@ res.status(201).json({
 #### 2. Improved Security Headers
 
 Added security documentation at the top of the file:
+
 ```javascript
 // ========================================
 // SECURITY NOTE: Private Key Handling
@@ -96,18 +101,20 @@ Added security documentation at the top of the file:
 #### 3. Enhanced Error Handling
 
 Updated all error responses to be environment-aware:
+
 ```javascript
 const isDev = process.env.NODE_ENV === "development";
 res.status(500).json({
   error: true,
   message: "Owner registration failed",
-  ...(isDev && { details: error.message }),  // Only show details in dev
+  ...(isDev && { details: error.message }), // Only show details in dev
 });
 ```
 
 #### 4. Added New Endpoints
 
 **GET /api/owners/me** (requires authentication)
+
 - Returns authenticated owner's profile
 - Does NOT return or generate private keys
 - Requires valid JWT token
@@ -121,6 +128,7 @@ res.status(500).json({
 #### 6. Enhanced Public Key Endpoint
 
 **GET /api/owners/public-key/:ownerId**
+
 - Added validation for ownerId format
 - Improved error handling
 - Added basic rate limiting support (via middleware)
@@ -154,6 +162,7 @@ CREATE TABLE owners (
 Desktop and Mobile apps must now:
 
 1. **Generate RSA-2048 keypair client-side:**
+
    ```javascript
    // Desktop (Node.js) or Mobile (Dart)
    const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", {
@@ -164,10 +173,12 @@ Desktop and Mobile apps must now:
    ```
 
 2. **Store private key securely locally:**
+
    - Desktop: Use encrypted filesystem or HSM
    - Mobile: Use platform secure storage (Keychain/Keystore)
 
 3. **Send only public key to server:**
+
    ```javascript
    POST /api/owners/register
    {
@@ -187,11 +198,13 @@ Desktop and Mobile apps must now:
 ## Testing & Verification
 
 ### Test Results
+
 ✅ **Smoke Test:** 100% PASS  
 ✅ **Coverage:** 48.79% overall (appropriate for this change)  
 ✅ **No Breaking Changes:** All existing tests pass
 
 ### What Was Tested
+
 - Owner registration with client public key
 - Login flow (unchanged, still works)
 - File operations (unchanged, still work)
@@ -202,6 +215,7 @@ Desktop and Mobile apps must now:
 ## Compliance & Standards
 
 **Complies with:**
+
 - ✅ OWASP Cryptographic Storage Cheat Sheet
 - ✅ NIST SP 800-175B (Guideline for Using Cryptographic Standards)
 - ✅ PCI DSS 3.2 (Cryptography standards)
@@ -209,6 +223,7 @@ Desktop and Mobile apps must now:
 - ✅ RFC 3394 (AES Key Wrap Algorithm)
 
 **Best Practices Followed:**
+
 - ✅ Private keys never generated server-side
 - ✅ Private keys never transmitted over network
 - ✅ Private keys never logged
@@ -225,6 +240,7 @@ Desktop and Mobile apps must now:
 ⚠️ **Data Migration Not Needed** - This affects only new registrations.
 
 If you have existing owners with server-generated keys:
+
 1. Generate new RSA-2048 keypair on desktop/mobile
 2. Update owner's public key via admin endpoint (TODO: implement if needed)
 3. Securely store private key locally

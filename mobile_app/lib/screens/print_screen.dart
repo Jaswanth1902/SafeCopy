@@ -81,12 +81,11 @@ class _PrintScreenState extends State<PrintScreen> {
       }
     } catch (e) {
       setState(() {
-        errorMessage = e.toString();
+        errorMessage = e.toString().replaceFirst('Exception: ', '');
         isLoading = false;
       });
       debugPrint('❌ Error loading file: $e');
-    }
-  }
+    }  }
 
   Future<void> _submitPrintJob() async {
     try {
@@ -134,19 +133,22 @@ class _PrintScreenState extends State<PrintScreen> {
         );
 
         Future.delayed(const Duration(seconds: 2), () {
-          Navigator.pop(context);
-        });
+          if (mounted) {
+            Navigator.pop(context);
       } else {
-        final errorData = jsonDecode(response.body);
-        throw Exception(errorData['message'] ?? 'Print job submission failed');
-      }
-    } catch (e) {
+        try {
+          final errorData = jsonDecode(response.body);
+          throw Exception(errorData['message'] ?? 'Print job submission failed');
+        } catch (_) {
+          throw Exception('Print job submission failed (${response.statusCode})');
+        }
+      }    } catch (e) {
       setState(() {
-        errorMessage = e.toString();
+        errorMessage = e.toString().replaceFirst('Exception: ', '');
         isSubmitting = false;
       });
       debugPrint('❌ Error submitting print job: $e');
-    }
+    }    }
   }
 
   @override
@@ -216,13 +218,12 @@ class _PrintScreenState extends State<PrintScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'ID: ${widget.fileId.substring(0, 8)}...',
+                                      'ID: ${widget.fileId.length > 8 ? widget.fileId.substring(0, 8) : widget.fileId}...',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey.shade600,
                                       ),
-                                    ),
-                                  ],
+                                    ),                                  ],
                                 ),
                               ),
                             ],

@@ -44,11 +44,11 @@ final response = await http.get(
 
 ### ✅ Backend (Express.js)
 
-**Status:** Complete and tested
+**Status:** Implemented and smoke-tested (against test DB)
 
 - All 8 routes implemented with JWT + RBAC
-- Smoke test PASSING with 100% coverage
-- Ready for live database deployment
+- Smoke tests PASSING (run against the test/local DB)
+- Ready for live database deployment after migrations are applied and smoke tests re-run against the live DB
 
 ---
 
@@ -76,19 +76,29 @@ Owner Flow:
 
 ### What's Ready for Testing
 
-- Backend API (with mocked DB)
+- Backend API (with test/local DB)
 - Mobile app upload + list + print screens
 - Desktop app login + jobs list
-- Windows printer service framework
-- File decryption service structure
+- Windows printer service framework (requires Windows for validation)
+- File decryption service structure (AES-GCM implementation present but requires dependency/runtime verification)
 
-### What Needs Completion
+### What Needs Completion (blocking Phase 4 entry)
 
-1. **Mobile app:** Wire main.dart routing to include all screens
-2. **Desktop app:** Complete AES-256-GCM decryption logic
-3. **Desktop app:** Test Windows printer integration
-4. **Infrastructure:** Set up live PostgreSQL + run migrations
-5. **Testing:** End-to-end testing with real database
+1. **Infrastructure — Live PostgreSQL & Migrations (BLOCKER):**
+   - Set up Postgres (docker-compose or managed service) and run `node backend/scripts/migrate.js`.
+   - Re-run backend smoke tests against the live DB.
+
+2. **AES-256-GCM Decryption (BLOCKER):**
+   - Verify AES-GCM runtime using a known test vector and ensure `pointycastle` dependencies are compatible. Decryption must authenticate the ciphertext using the tag.
+
+3. **Mobile Routing (BLOCKER):**
+   - Wire `main.dart` so upload → list → print flows are reachable by tests and manual QA.
+
+4. **Windows printer validation (Platform-specific):**
+   - Validate printing end-to-end on Windows. This is platform-specific and can be staged as Phase 4.1 if printing is not required for initial Phase 4 release.
+
+5. **End-to-end testing:**
+   - Run full E2E flows with a live DB and Windows print validation (if printing is in scope).
 
 ---
 
@@ -221,10 +231,23 @@ Owner Flow:
 
 ## Blockers to Production
 
-1. **PostgreSQL setup** - Currently mocked, need live DB for migrations
-2. **AES-256-GCM decryption** - Framework ready, need cipher implementation
-3. **Windows printer testing** - Needs Windows environment, API calls implemented
-4. **Main app routing** - Mobile app needs navigation setup
+The following items currently block a Phase 4 release (must be addressed first):
+
+1. **PostgreSQL + Migrations (Required)**
+   - Why: Backend & E2E tests depend on the DB schema. Migrations must be applied to the target DB before live testing.
+   - How to verify: `node backend/scripts/migrate.js` then `npm --prefix backend test`.
+
+2. **AES-256-GCM Decryption (Required)**
+   - Why: File confidentiality & integrity depend on authenticated decryption. Without verified AES-GCM decryption E2E cannot be trusted.
+   - How to verify: Unit test with known AES-GCM vector and integration test: upload → download → decrypt → compare payload.
+
+3. **Mobile Routing (Required)**
+   - Why: Automated and manual E2E flows need routes wired to reach upload/list/print screens.
+
+4. **Windows Printing (Platform-specific, Conditional)**
+   - Why: Printing must be validated on Windows. If Phase 4 excludes printing, this can be scheduled for Phase 4.1.
+
+Notes: Smoke tests currently pass against the test DB, but live DB verification is required before declaring production-ready.
 
 ---
 

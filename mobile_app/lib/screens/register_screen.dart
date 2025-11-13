@@ -73,9 +73,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       widget.onRegisterSuccess(response.accessToken, response.user.id);
     } catch (e) {
       setState(() {
-        _errorMessage = 'Registration failed: ${e.toString()}';
-      });
-    } finally {
+        _errorMessage = 'Registration failed. Please check your details and try again.';
+      });    } finally {
       setState(() {
         _isLoading = false;
       });

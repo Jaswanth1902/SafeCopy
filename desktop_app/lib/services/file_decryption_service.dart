@@ -10,6 +10,10 @@ import 'package:pointycastle/api.dart';
 import 'package:pointycastle/asymmetric/rsa.dart';
 import 'package:pointycastle/asymmetric/rsa_key_parser.dart';
 import 'package:pointycastle/key_generators/rsa_key_generator.dart';
+import 'package:pointycastle/paddings/oaep.dart';
+import 'package:pointycastle/paddings/oaep_encoding.dart';
+import 'package:pointycastle/block/aes_fast.dart';
+import 'package:pointycastle/block/modes/gcm.dart';
 
 // ========================================
 // FILE DECRYPTION SERVICE
@@ -23,6 +27,7 @@ class FileDecryptionService {
   static Future<Uint8List?> decryptFile({
     required Uint8List encryptedData,
     required String privateKeyPem,
+    required String encryptedAesKey,
     required String iv,
     required String authTag,
   }) async {
@@ -34,9 +39,7 @@ class FileDecryptionService {
       }
 
       // 2. Decrypt the AES key using RSA
-      final encryptedKeyBytes = base64Decode(
-        iv,
-      ); // Note: In real impl, this should be encrypted key
+      final encryptedKeyBytes = base64Decode(encryptedAesKey);
       final decryptedAesKey = _decryptWithRsa(encryptedKeyBytes, privateKey);
 
       if (decryptedAesKey == null) {
@@ -57,7 +60,6 @@ class FileDecryptionService {
       return null;
     }
   }
-
   // ========================================
   // PARSE PRIVATE KEY FROM PEM
   // ========================================
@@ -74,12 +76,10 @@ class FileDecryptionService {
           .replaceAll('\r', '')
           .trim();
 
-      // Decode base64
-      final keyBytes = base64Decode(key);
-
-      // Parse using RSA key parser
+      // Parse using RSA key parser (pass the PEM string to parser)
+      // Parse using RSA key parser (pass the PEM string to parser)
       final parser = RSAKeyParser();
-      final parsedKey = parser.parse(keyBytes);
+      final parsedKey = parser.parse(pemKey);
 
       if (parsedKey is RSAPrivateKey) {
         return parsedKey as RSAPrivateKey;
@@ -101,8 +101,8 @@ class FileDecryptionService {
     RSAPrivateKey privateKey,
   ) {
     try {
-      // Use PKCS1 padding
-      final encryptor = RSAEngine()
+      // Use OAEP padding for security
+      final encryptor = OAEPEncoding(RSAEngine())
         ..init(false, PrivateKeyParameter<RSAPrivateKey>(privateKey));
 
       final decrypted = encryptor.process(encryptedData);
@@ -124,14 +124,32 @@ class FileDecryptionService {
     required Uint8List authTag,
   }) {
     try {
-      // TODO: Implement AES-256-GCM decryption
-      // For now, return a placeholder
-      // In production, use proper AES-GCM library
+      // Validate inputs
+      if (aesKey.length != 32) {
+        debugPrint('Invalid AES key length: ${aesKey.length}. Expected 32 bytes for AES-256.');
+        return null;
+      }
+      if (iv.isEmpty) {
+        debugPrint('IV is required for AES-GCM');
+        return null;
+      }
+      if (authTag.isEmpty) {
+        debugPrint('Authentication tag is required for AES-GCM');
+        return null;
+      }
 
-      debugPrint('Decrypting ${encryptedData.length} bytes with AES-256-GCM');
-      debugPrint('Key length: ${aesKey.length}, IV length: ${iv.length}');
+      // GCM expects ciphertext concatenated with the auth tag for processing
+      final input = Uint8List.fromList([
+        ...encryptedData,
+        ...authTag,
+      ]);
 
-      return encryptedData; // Placeholder
+      final aead = GCMBlockCipher(AESFastEngine());
+      final params = AEADParameters(KeyParameter(aesKey), authTag.length * 8, iv, Uint8List(0));
+      aead.init(false, params); // false = decrypt
+
+      final output = aead.process(input);
+      return output;
     } catch (e) {
       debugPrint('Error decrypting with AES-256-GCM: $e');
       return null;
@@ -147,10 +165,13 @@ class FileDecryptionService {
     required String originalFileName,
   }) async {
     try {
+      // Sanitize filename to prevent path traversal
+      final sanitizedName = originalFileName.split('/').last.split('\\').last;
+      
       // Save to temp directory
       final tempDir = Directory.systemTemp;
       final tempFile = File(
-        '${tempDir.path}/decrypt_${DateTime.now().millisecondsSinceEpoch}_$originalFileName',
+        '${tempDir.path}/decrypt_${DateTime.now().millisecondsSinceEpoch}_$sanitizedName',
       );
 
       await tempFile.writeAsBytes(decryptedData);
@@ -159,8 +180,7 @@ class FileDecryptionService {
       debugPrint('Error saving decrypted file: $e');
       return null;
     }
-  }
-}
+  }}
 
 // ========================================
 // DEBUG HELPER

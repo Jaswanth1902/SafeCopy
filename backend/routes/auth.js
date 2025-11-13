@@ -22,13 +22,28 @@ router.post("/register", async (req, res) => {
     }
 
     // Check existing user
-    const exists = await db.query("SELECT id FROM users WHERE email = $1", [
-      email,
-    ]);
-    if (exists.rows.length > 0) {
-      return res.status(409).json({ error: "User already exists" });
-    }
+    const passwordHash = await AuthService.hashPassword(password);
 
+    const insertQ = `
+      INSERT INTO users (email, password_hash, full_name)
+      VALUES ($1, $2, $3)
+      RETURNING id, email, full_name, created_at
+    `;
+
+    let result;
+    try {
+      result = await db.query(insertQ, [
+        email,
+        passwordHash,
+        full_name || null,
+      ]);
+    } catch (dbError) {
+      if (dbError.code === '23505') { // Unique violation
+        return res.status(409).json({ error: "User already exists" });
+      }
+      throw dbError;
+    }
+    const user = result.rows[0];
     const passwordHash = await AuthService.hashPassword(password);
 
     const insertQ = `
@@ -66,15 +81,18 @@ router.post("/register", async (req, res) => {
         user: { id: user.id, email: user.email, full_name: user.full_name },
       });
   } catch (error) {
-    console.error("Auth register error:", error);
+    console.error("Auth register error:", { 
+      message: error.message,
+      code: error.code,
+      // Omit full error and request body to avoid logging PII
+    });
     res
       .status(500)
       .json({
         error: true,
         message: "Registration failed",
-        details: error.message,
-      });
-  }
+        // Omit details in production to avoid leaking internal info
+      });  }
 });
 
 // POST /api/auth/login
@@ -134,15 +152,18 @@ router.post("/refresh-token", async (req, res) => {
       return res.status(401).json({ error: "Invalid refresh token" });
     }
 
-    // Check sessions table for hashed refresh token
+    // Locate the specific session matching this refresh token
     const hashed = AuthService.hashToken(refreshToken);
     const q =
-      "SELECT user_id FROM sessions WHERE refresh_token_hash = $1 AND is_valid = true LIMIT 1";
+      "SELECT id AS session_id, user_id FROM sessions WHERE refresh_token_hash = $1 AND is_valid = true AND refresh_expires_at > NOW() LIMIT 1";
     const r = await db.query(q, [hashed]);
-    if (r.rows.length === 0)
+    if (r.rows.length === 0) {
       return res.status(401).json({ error: "Refresh token not recognized" });
+    }
 
+    const sessionId = r.rows[0].session_id;
     const userId = r.rows[0].user_id;
+
     const newPayload = {
       sub: userId,
       email: payload.email,
@@ -151,13 +172,14 @@ router.post("/refresh-token", async (req, res) => {
     const accessToken = AuthService.generateAccessToken(newPayload);
     const newRefresh = AuthService.generateRefreshToken(newPayload);
 
-    // Update session with new refresh token hash
+    // Update only the specific session record (do not update all user's sessions)
     await db.query(
-      "UPDATE sessions SET refresh_token_hash = $1, token_hash = $2 WHERE user_id = $3",
+      "UPDATE sessions SET refresh_token_hash = $1, token_hash = $2 WHERE user_id = $3 AND id = $4",
       [
         AuthService.hashToken(newRefresh),
         AuthService.hashToken(accessToken),
         userId,
+        sessionId,
       ]
     );
 

@@ -13,13 +13,16 @@ const compression = require("compression");
 // ========================================
 
 // Validate critical environment variables at startup
-const requiredEnvVars = ["JWT_SECRET"];
+const requiredEnvVars = ["JWT_SECRET", "ENCRYPTION_KEY"];
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
     throw new Error(`Critical: ${envVar} environment variable is not set`);
   }
   if (envVar === "JWT_SECRET" && process.env[envVar].length < 32) {
     throw new Error("Critical: JWT_SECRET must be at least 32 characters");
+  }
+  if (envVar === "ENCRYPTION_KEY" && process.env[envVar].length < 32) {
+    throw new Error("Critical: ENCRYPTION_KEY must be at least 32 characters (preferably 64 hex chars for 32 bytes)");
   }
 }
 

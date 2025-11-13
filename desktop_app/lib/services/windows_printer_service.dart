@@ -46,14 +46,15 @@ class WindowsPrinterService {
       // Enumerate all printers
       // This is a simplified implementation - in production,
       // use proper FFI bindings to Windows Print API
-      printers.add(
-        PrinterInfo(
-          name: defaultPrinterName ?? 'Default Printer',
-          status: 'Ready',
-          isDefault: true,
-        ),
-      );
-
+      if (defaultPrinterName != null) {
+        printers.add(
+          PrinterInfo(
+            name: defaultPrinterName,
+            status: 'Ready',
+            isDefault: true,
+          ),
+        );
+      }
       // TODO: Add more printers via EnumPrinters API
     } catch (e) {
       debugPrint('Error enumerating printers: $e');

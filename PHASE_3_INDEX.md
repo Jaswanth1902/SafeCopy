@@ -25,6 +25,7 @@
 #### Phase 2: Backend Implementation ✅
 
 - **[BACKEND_INDEX.md](BACKEND_INDEX.md)** - Backend completion status
+- **[BACKEND_READY.md](BACKEND_READY.md)** - Backend readiness report
 - **[backend/](backend/)** - All backend code
   - `server.js` - Express app setup
   - `routes/` - API endpoints (auth, owners, files)
@@ -38,14 +39,17 @@
 #### Phase 3: Frontend API Integration 🟡 (75% Complete)
 
 - **[PHASE_3_COMPLETION.md](PHASE_3_COMPLETION.md)** - This session's work
+- **[IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md)** - Feature implementation checklist
 - **[mobile_app/](mobile_app/)** - User mobile app
-  - `lib/screens/` - Login, Register, Upload, File List, Print
+  - `lib/screens/` - Login, Register, Upload, File List, Print (5 screens)
   - `lib/services/` - API client, user service, encryption
   - All screens wired to real API ✅
+  - Navigation: Bottom tab bar with 4 tabs (Home, Upload, Jobs, Settings)
 - **[desktop_app/](desktop_app/)** - Owner desktop app
-  - `lib/screens/` - Owner login, print jobs
+  - `lib/screens/` - Owner login, print jobs (2 screens)
   - `lib/services/` - API client, printer, decryption
   - Screens wired to real API ✅
+  - Navigation: Basic screen transition after login
 
 ### Key Artifacts
 
@@ -61,10 +65,11 @@
 - **[database/schema.sql](database/schema.sql)** - Production schema (13 tables)
 - **[database/schema_simplified.sql](database/schema_simplified.sql)** - Simplified version
 - **[backend/scripts/migrate.js](backend/scripts/migrate.js)** - Migration runner
+ - **Note:** Migrations are not verifiable from the repository alone. Run `node backend/scripts/migrate.js` to apply migrations to your PostgreSQL instance. Last checked: November 13, 2025.
 
 #### Testing
 
-- **[backend/**tests**/files.smoke.test.js](backend/__tests__/files.smoke.test.js)** - Smoke test
+- **[backend/__tests__/files.smoke.test.js](backend/__tests__/files.smoke.test.js)** - Smoke test
 - Full workflow: register → login → upload → list → print → delete
 - All 8 tests PASSING ✅
 
@@ -121,7 +126,7 @@
 | ----- | --------------- | ------- | ---------------------------------- |
 | 1     | Architecture    | ✅ 100% | Design complete                    |
 | 2     | Backend API     | ✅ 100% | 8 routes, all tested               |
-| 2     | Database Schema | ✅ 100% | 13 tables designed                 |
+| 2     | Database Schema | 🟡 Awaiting migration | 13 tables designed (migrations pending) |
 | 3     | Mobile App      | ✅ 95%  | Screens wired, routing pending     |
 | 3     | Desktop App     | ✅ 80%  | Login/jobs wired, printing pending |
 | 3     | Printer Support | 🟡 70%  | Framework ready, testing pending   |
@@ -340,19 +345,31 @@ npm test
 
 ### Blocking Issues
 
-- PostgreSQL unavailable locally (docker-compose setup needed)
-- AES-256-GCM decryption pending implementation
-- Windows printer testing requires Windows environment
-- Mobile app main.dart routing needs setup
+- PostgreSQL unavailable locally / migrations not applied (docker-compose + `node backend/scripts/migrate.js` required)
+- AES-256-GCM decryption: implementation present in repo but requires dependency validation and runtime tests (verify with test vector)
+- Windows printer testing requires Windows environment and manual validation (platform-specific)
+- Mobile app `main.dart` routing needs wiring so E2E flows are reachable
 
 ### Success Criteria
 
-- ✅ All backend tests passing
-- ✅ Mobile app fully API-integrated
-- ✅ Desktop app fully API-integrated
-- ✅ Windows printer operational
-- ✅ End-to-end user flow working
-- ✅ Security validation complete
+- ✅ All backend unit & smoke tests passing (note: tests run against local/test DB)
+- ✅ Mobile app API integration wired
+- ✅ Desktop app API integration wired
+- 🟡 Windows printer operational — testing pending on Windows
+- 🟡 End-to-end user flow working — blocked on live DB & migrations
+- 🟡 Security validation — pending final review and runtime checks
+
+Verification commands (examples):
+
+```
+# Run migrations against your Postgres instance
+node backend/scripts/migrate.js
+
+# Run backend tests (smoke/unit)
+npm --prefix backend test
+```
+
+Last status check: November 13, 2025
 
 ---
 
@@ -378,7 +395,7 @@ SafeCopy/
 │   ├── lib/
 │   │   ├── screens/              # 5 screens (all wired)
 │   │   ├── services/             # API, auth, encryption
-│   │   └── main.dart             # Entry (routing pending)
+│   │   └── main.dart             # Entry (routing: bottom tab nav)
 │   ├── pubspec.yaml              # Dependencies
 │   └── README.md                 # Setup guide
 │
@@ -448,7 +465,7 @@ SafeCopy/
 
 1. **Backend Setup** - [backend/README.md](backend/README.md)
 2. **Mobile Setup** - [GETTING_STARTED/02_QUICK_START.md](GETTING_STARTED/02_QUICK_START.md)
-3. **API Testing** - [backend/**tests**/files.smoke.test.js](backend/__tests__/files.smoke.test.js)
+3. **API Testing** - [backend/__tests__/files.smoke.test.js](backend/__tests__/files.smoke.test.js)
 4. **Deployment Guide** - [PHASES_REMAINING.md](PHASES_REMAINING.md)
 
 ---

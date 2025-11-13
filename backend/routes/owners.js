@@ -86,11 +86,12 @@ router.post("/register", async (req, res) => {
       accessToken,
       refreshToken,
       owner: { id: owner.id, email: owner.email, full_name: owner.full_name },
-      note: "Your private key was generated and stored securely on your device. Keep it safe and never share it.",
-    });
+      note: "Ensure your private key is stored securely on your device. Keep it safe and never share it.",    });
   } catch (error) {
-    console.error("Owner register error:", error);
     const isDev = process.env.NODE_ENV === "development";
+    const errorMsg = `Owner registration failed: ${error.code || error.name || 'UNKNOWN'}`;
+    if (isDev) console.error(errorMsg, { stack: error.stack });
+    else console.error(errorMsg);
     res.status(500).json({
       error: true,
       message: "Owner registration failed",
@@ -140,8 +141,10 @@ router.post("/login", async (req, res) => {
       owner: { id: owner.id, email: owner.email, full_name: owner.full_name },
     });
   } catch (error) {
-    console.error("Owner login error:", error);
     const isDev = process.env.NODE_ENV === "development";
+    const errorMsg = `Owner login failed: ${error.code || error.name || 'UNKNOWN'}`;
+    if (isDev) console.error(errorMsg, { stack: error.stack });
+    else console.error(errorMsg);
     res.status(500).json({
       error: true,
       message: "Owner login failed",
@@ -171,8 +174,10 @@ router.get("/public-key/:ownerId", async (req, res) => {
 
     res.json({ success: true, public_key: result.rows[0].public_key });
   } catch (error) {
-    console.error("Get public key error:", error);
     const isDev = process.env.NODE_ENV === "development";
+    const errorMsg = `Failed to fetch public key: ${error.code || error.name || 'UNKNOWN'}`;
+    if (isDev) console.error(errorMsg, { stack: error.stack });
+    else console.error(errorMsg);
     res.status(500).json({
       error: true,
       message: "Failed to fetch public key",
@@ -197,8 +202,10 @@ router.get("/me", verifyToken, verifyRole(["owner"]), async (req, res) => {
 
     res.json({ success: true, owner: result.rows[0] });
   } catch (error) {
-    console.error("Get owner profile error:", error);
     const isDev = process.env.NODE_ENV === "development";
+    const errorMsg = `Failed to fetch owner profile: ${error.code || error.name || 'UNKNOWN'}`;
+    if (isDev) console.error(errorMsg, { stack: error.stack });
+    else console.error(errorMsg);
     res.status(500).json({
       error: true,
       message: "Failed to fetch owner profile",

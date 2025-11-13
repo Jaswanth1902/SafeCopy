@@ -145,19 +145,16 @@ class _UploadScreenState extends State<UploadScreen> {
       });
 
       // Step 3: Upload to server
-      final userService = UserService();
-      final accessToken = await userService.getAccessToken();
-
-      if (accessToken == null) {
-        throw Exception('Not authenticated. Please login again.');
-      }
-
       // Prompt for owner ID
       final ownerId = await _promptForOwnerId();
       if (ownerId == null || ownerId.isEmpty) {
-        throw Exception('Owner selection required');
+        setState(() {
+          isEncrypting = false;
+          isUploading = false;
+          uploadStatus = null;
+        });
+        return; // User cancelled, abort silently
       }
-
       await uploadEncryptedFile(
         encryptedData: encryptResult['encrypted'] as Uint8List,
         ivVector: encryptResult['iv'] as Uint8List,

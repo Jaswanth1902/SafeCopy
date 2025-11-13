@@ -22,14 +22,16 @@ class OwnerLoginResponse {
   });
 
   factory OwnerLoginResponse.fromJson(Map<String, dynamic> json) {
+    if (!json.containsKey('access_token') || !json.containsKey('refresh_token')) {
+      throw Exception('Missing required authentication tokens');
+    }
     return OwnerLoginResponse(
-      accessToken: json['access_token'] ?? '',
-      refreshToken: json['refresh_token'] ?? '',
-      owner: json['owner'] ?? {},
+      accessToken: json['access_token'] as String,
+      refreshToken: json['refresh_token'] as String,
+      owner: json['owner'] as Map<String, dynamic>? ?? {},
     );
   }
 }
-
 class PrintFile {
   final String fileId;
   final String fileName;
@@ -69,28 +71,32 @@ class OwnerApiService {
 
   Future<OwnerLoginResponse> loginOwner({
     required String email,
-    required String password,
-  }) async {
-    try {
-      final response = await http
-          .post(
-            Uri.parse('$apiBaseUrl/api/owners/login'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'email': email, 'password': password}),
-          )
-          .timeout(const Duration(seconds: 10));
+      required String password,
+    }) async {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('$apiBaseUrl/api/owners/login'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'email': email, 'password': password}),
+            )
+            .timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return OwnerLoginResponse.fromJson(data);
-      } else {
-        final error = jsonDecode(response.body);
-        throw Exception(error['message'] ?? 'Login failed');
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          return OwnerLoginResponse.fromJson(data);
+        } else {
+          try {
+            final error = jsonDecode(response.body);
+            throw Exception(error['message'] ?? 'Login failed');
+          } catch (_) {
+            throw Exception('Login failed: ${response.statusCode}');
+          }
+        }
+      } catch (e) {
+        rethrow;
       }
-    } catch (e) {
-      rethrow;
     }
-  }
 
   // ========================================
   // GET PRINT JOBS

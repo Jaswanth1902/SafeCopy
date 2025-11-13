@@ -1,0 +1,30 @@
+## Root .gitignore for SafeCopy
+
+# Node modules
+node_modules/
+
+# Backend coverage reports (generated artifacts)
+backend/coverage/
+backend/coverage/**
+
+# Coverage artifacts added by test tools
+# Remove generated lcov and nyc outputs from VCS
+lcov.info
+.nyc_output/
+**/lcov-report/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Environment files
+backend/.env
+.env
+
+# Build outputs
+dist/
+build/

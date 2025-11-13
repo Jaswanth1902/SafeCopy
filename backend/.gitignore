@@ -1,0 +1,53 @@
+# Environment variables - NEVER commit
+.env
+.env.local
+.env.*.local
+
+# Node modules
+node_modules/
+npm-debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+*.pid
+*.seed
+*.pid.lock
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build output
+dist/
+build/
+
+# Testing
+coverage/
+lcov.info
+.nyc_output/
+lcov-report/
+
+# Database
+*.sql
+!schema.sql
+!schema_simplified.sql
+
+# Uploads
+uploads/
+
+# Temporary files
+tmp/
+temp/

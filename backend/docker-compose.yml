@@ -8,8 +8,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: secure_print
     ports:
-      - "5432:5432"
-    volumes:
+      - "127.0.0.1:5432:5432"    volumes:
       - postgres-data:/var/lib/postgresql/data
 
 volumes:

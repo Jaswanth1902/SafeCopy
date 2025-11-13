@@ -26,9 +26,24 @@ async function runMigrations() {
     const sql = fs.readFileSync(schemaPath, "utf8");
 
     console.log("Running migrations from", schemaPath);
-    await client.query(sql);
 
-    console.log("✓ Database schema created successfully");
+    // Start a transaction and ensure we rollback on any failure
+    await client.query('BEGIN');
+    try {
+      await client.query(sql);
+      await client.query('COMMIT');
+      console.log("✓ Database schema created successfully");
+    } catch (txError) {
+      // Attempt to rollback the transaction; if rollback fails, log that as well
+      try {
+        await client.query('ROLLBACK');
+        console.error('Transaction rolled back due to error.');
+      } catch (rbError) {
+        console.error('Rollback failed:', rbError);
+      }
+      // Re-throw so outer catch sets exit code and logs the original error
+      throw txError;
+    }
   } catch (error) {
     console.error("✗ Migration failed:", error);
     process.exitCode = 1;

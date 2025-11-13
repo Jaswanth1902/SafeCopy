@@ -50,7 +50,7 @@ class _FileListScreenState extends State<FileListScreen> {
       // Get user's files from API
       final response = await http
           .get(
-            Uri.parse('${apiService.apiBaseUrl}/api/files'),
+            Uri.parse('${apiService.baseUrl}/api/files'),
             headers: {
               'Authorization': 'Bearer $accessToken',
               'Content-Type': 'application/json',
@@ -60,8 +60,23 @@ class _FileListScreenState extends State<FileListScreen> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        
+        // Safely validate and cast files list
+        List<Map<String, dynamic>> validatedFiles = [];
+        try {
+          if (data['files'] is List) {
+            validatedFiles = (data['files'] as List)
+                .where((item) => item is Map)
+                .map((item) => Map<String, dynamic>.from(item as Map))
+                .toList();
+          }
+        } catch (e) {
+          debugPrint('⚠️ Error validating files list: $e');
+          validatedFiles = [];
+        }
+        
         setState(() {
-          files = List<Map<String, dynamic>>.from(data['files'] ?? []);
+          files = validatedFiles;
           isLoading = false;
         });
       } else {
@@ -81,6 +96,18 @@ class _FileListScreenState extends State<FileListScreen> {
       context,
       MaterialPageRoute(builder: (context) => PrintScreen(fileId: fileId)),
     );
+  }
+
+  /// Safely format file ID for display: truncate to 8 chars with ellipsis or show placeholder
+  String _formatFileId(dynamic fileId) {
+    if (fileId == null || fileId.toString().isEmpty) {
+      return 'No ID';
+    }
+    final idStr = fileId.toString();
+    if (idStr.length <= 8) {
+      return idStr;
+    }
+    return '${idStr.substring(0, 8)}...';
   }
 
   void _deleteFile(String fileId) async {
@@ -104,7 +131,7 @@ class _FileListScreenState extends State<FileListScreen> {
 
                 final response = await http
                     .post(
-                      Uri.parse('${apiService.apiBaseUrl}/api/delete/$fileId'),
+                      Uri.parse('${apiService.baseUrl}/api/delete/$fileId'),
                       headers: {
                         'Authorization': 'Bearer $accessToken',
                         'Content-Type': 'application/json',
@@ -113,6 +140,7 @@ class _FileListScreenState extends State<FileListScreen> {
                     .timeout(const Duration(seconds: 10));
 
                 if (response.statusCode == 200) {
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(
                     context,
                   ).showSnackBar(const SnackBar(content: Text('File deleted')));
@@ -121,12 +149,12 @@ class _FileListScreenState extends State<FileListScreen> {
                   throw Exception('Delete failed');
                 }
               } catch (e) {
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(
                   context,
                 ).showSnackBar(SnackBar(content: Text('Error: $e')));
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Delete'),
           ),
         ],
@@ -211,17 +239,24 @@ class _FileListScreenState extends State<FileListScreen> {
                       ),
                       title: Text(file['file_name'] ?? 'Unknown'),
                       subtitle: Text(
-                        'ID: ${file['file_id']?.substring(0, 8)}...',
+                        'ID: ${_formatFileId(file['file_id'])}',
                       ),
                       trailing: PopupMenuButton(
+                        onSelected: (value) {
+                          if (value == 'print') {
+                            _openFile(file['file_id'] ?? '');
+                          } else if (value == 'delete') {
+                            _deleteFile(file['file_id'] ?? '');
+                          }
+                        },
                         itemBuilder: (context) => [
-                          PopupMenuItem(
-                            child: const Text('Print'),
-                            onTap: () => _openFile(file['file_id'] ?? ''),
+                          const PopupMenuItem(
+                            value: 'print',
+                            child: Text('Print'),
                           ),
-                          PopupMenuItem(
-                            child: const Text('Delete'),
-                            onTap: () => _deleteFile(file['file_id'] ?? ''),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Text('Delete'),
                           ),
                         ],
                       ),

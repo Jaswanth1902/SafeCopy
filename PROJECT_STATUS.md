@@ -52,7 +52,7 @@
 - [x] **Testing**
   - Jest + Supertest smoke test
   - Full workflow: register → login → upload → list → print → delete
-  - **ALL TESTS PASSING ✓**
+  - **Smoke tests PASSING (ran against test/local DB). Live DB verification pending.**
 
 ### Mobile App (Flutter)
 
@@ -373,13 +373,13 @@ flutter run -d windows
 # 2. View pending jobs
 # 3. Print job (decrypt → Windows printer)
 ```
+## 📚 Documentation (Future)
 
 - [ ] Swagger/OpenAPI specification
 - [ ] Mobile app user guide
 - [ ] Desktop app user guide
 - [ ] Administrator guide
 - [ ] Troubleshooting guide
-
 ---
 
 ## 🚀 HOW TO RUN LOCALLY

@@ -78,8 +78,26 @@ backend/
    DATABASE_URL=postgresql://user:password@localhost:5432/secure_print
    JWT_SECRET=your_secret_key_min_32_characters
    JWT_REFRESH_SECRET=your_refresh_secret_min_32_characters
+   ENCRYPTION_KEY=your_encryption_key_generated_from_crypto
    CORS_ORIGIN=http://localhost:3000
    ```
+
+   **Important:** Generate secure random values for `ENCRYPTION_KEY` and `JWT_*` secrets:
+   ```bash
+   # Generate a 32-byte encryption key (outputs as hex)
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   
+   # Generate JWT secrets (32+ bytes)
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+   
+   For **production**, use your secrets manager or CI/CD environment:
+   - AWS Secrets Manager: `aws secretsmanager create-secret --name safecopy/prod --secret-string file://.env`
+   - GitHub Actions: Add secrets via repository settings
+   - Docker/Kubernetes: Use secret mounts or environment variable injection
+   
+   See [CREDENTIALS_SECURITY.md](CREDENTIALS_SECURITY.md) for detailed security guidelines.
 
 3. **Create Database**
    ```bash
