@@ -248,12 +248,10 @@ router.get(
       // Ensure the requesting owner is assigned to this file
       if (req.user && req.user.role === "owner") {
         if (file.owner_id && file.owner_id !== req.user.sub) {
-          return res
-            .status(403)
-            .json({
-              error: true,
-              message: "Forbidden: not assigned to this file",
-            });
+          return res.status(403).json({
+            error: true,
+            message: "Forbidden: not assigned to this file",
+          });
         }
       }
 
@@ -342,12 +340,10 @@ router.post(
       // Ensure owner matches
       if (req.user && req.user.role === "owner") {
         if (file.owner_id && file.owner_id !== req.user.sub) {
-          return res
-            .status(403)
-            .json({
-              error: true,
-              message: "Forbidden: not assigned to this file",
-            });
+          return res.status(403).json({
+            error: true,
+            message: "Forbidden: not assigned to this file",
+          });
         }
       }
 

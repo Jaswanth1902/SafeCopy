@@ -25,7 +25,9 @@ for (const envVar of requiredEnvVars) {
 
 // Validate CORS origin in production
 if (process.env.NODE_ENV === "production" && !process.env.CORS_ORIGIN) {
-  throw new Error("Critical: CORS_ORIGIN must be set in production environment");
+  throw new Error(
+    "Critical: CORS_ORIGIN must be set in production environment"
+  );
 }
 
 // Initialize Express App
