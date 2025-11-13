@@ -11,6 +11,80 @@ class ApiService {
   final String baseUrl = 'http://localhost:5000';
 
   // ========================================
+  // AUTHENTICATION
+  // ========================================
+
+  Future<LoginResponse> loginUser({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final url = Uri.parse('$baseUrl/api/auth/login');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        return LoginResponse.fromJson(json);
+      } else {
+        throw ApiException(
+          'Login failed: ${response.statusCode}',
+          response.statusCode,
+        );
+      }
+    } catch (e) {
+      throw ApiException('Login error: $e', -1);
+    }
+  }
+
+  Future<RegisterResponse> registerUser({
+    required String email,
+    required String password,
+    required String fullName,
+  }) async {
+    try {
+      final url = Uri.parse('$baseUrl/api/auth/register');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+          'full_name': fullName,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        final json = jsonDecode(response.body);
+        return RegisterResponse.fromJson(json);
+      } else {
+        throw ApiException(
+          'Registration failed: ${response.statusCode}',
+          response.statusCode,
+        );
+      }
+    } catch (e) {
+      throw ApiException('Registration error: $e', -1);
+    }
+  }
+
+  Future<void> logoutUser({required String refreshToken}) async {
+    try {
+      final url = Uri.parse('$baseUrl/api/auth/logout');
+      await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'refreshToken': refreshToken}),
+      );
+    } catch (e) {
+      // Logout errors are not critical
+    }
+  }
+
+  // ========================================
   // UPLOAD FILE
   // ========================================
 
@@ -20,6 +94,8 @@ class ApiService {
     required Uint8List authTag,
     required String fileName,
     required String fileMimeType,
+    required String accessToken,
+    required String ownerId,
     void Function(int sent, int total)? onProgress,
   }) async {
     try {
@@ -27,11 +103,13 @@ class ApiService {
 
       // Create multipart request
       final request = http.MultipartRequest('POST', url);
+      request.headers['Authorization'] = 'Bearer $accessToken';
 
       // Add fields
       request.fields['file_name'] = fileName;
       request.fields['iv_vector'] = base64Encode(ivVector);
       request.fields['auth_tag'] = base64Encode(authTag);
+      request.fields['owner_id'] = ownerId;
 
       // Add file
       request.files.add(
@@ -65,10 +143,13 @@ class ApiService {
   // LIST FILES
   // ========================================
 
-  Future<List<FileItem>> listFiles() async {
+  Future<List<FileItem>> listFiles({required String accessToken}) async {
     try {
       final url = Uri.parse('$baseUrl/api/files');
-      final response = await http.get(url);
+      final response = await http.get(
+        url,
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -91,10 +172,16 @@ class ApiService {
   // GET FILE FOR PRINTING
   // ========================================
 
-  Future<PrintFileResponse> getFileForPrinting(String fileId) async {
+  Future<PrintFileResponse> getFileForPrinting({
+    required String fileId,
+    required String accessToken,
+  }) async {
     try {
       final url = Uri.parse('$baseUrl/api/print/$fileId');
-      final response = await http.get(url);
+      final response = await http.get(
+        url,
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -114,10 +201,16 @@ class ApiService {
   // DELETE FILE
   // ========================================
 
-  Future<DeleteResponse> deleteFile(String fileId) async {
+  Future<DeleteResponse> deleteFile({
+    required String fileId,
+    required String accessToken,
+  }) async {
     try {
       final url = Uri.parse('$baseUrl/api/delete/$fileId');
-      final response = await http.post(url);
+      final response = await http.post(
+        url,
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -276,6 +369,68 @@ class DeleteResponse {
       status: json['status'] ?? '',
       deletedAt: json['deleted_at'] ?? '',
       message: json['message'] ?? '',
+    );
+  }
+}
+
+class UserInfo {
+  final String id;
+  final String email;
+  final String? fullName;
+
+  UserInfo({required this.id, required this.email, this.fullName});
+
+  factory UserInfo.fromJson(Map<String, dynamic> json) {
+    return UserInfo(
+      id: json['id'] ?? '',
+      email: json['email'] ?? '',
+      fullName: json['full_name'],
+    );
+  }
+}
+
+class LoginResponse {
+  final bool success;
+  final String accessToken;
+  final String refreshToken;
+  final UserInfo user;
+
+  LoginResponse({
+    required this.success,
+    required this.accessToken,
+    required this.refreshToken,
+    required this.user,
+  });
+
+  factory LoginResponse.fromJson(Map<String, dynamic> json) {
+    return LoginResponse(
+      success: json['success'] ?? false,
+      accessToken: json['accessToken'] ?? '',
+      refreshToken: json['refreshToken'] ?? '',
+      user: UserInfo.fromJson(json['user'] ?? {}),
+    );
+  }
+}
+
+class RegisterResponse {
+  final bool success;
+  final String accessToken;
+  final String refreshToken;
+  final UserInfo user;
+
+  RegisterResponse({
+    required this.success,
+    required this.accessToken,
+    required this.refreshToken,
+    required this.user,
+  });
+
+  factory RegisterResponse.fromJson(Map<String, dynamic> json) {
+    return RegisterResponse(
+      success: json['success'] ?? false,
+      accessToken: json['accessToken'] ?? '',
+      refreshToken: json['refreshToken'] ?? '',
+      user: UserInfo.fromJson(json['user'] ?? {}),
     );
   }
 }

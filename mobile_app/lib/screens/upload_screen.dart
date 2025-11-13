@@ -14,6 +14,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import '../services/encryption_service.dart';
 import '../services/api_service.dart';
+import '../services/user_service.dart';
 
 // ========================================
 // UPLOAD SCREEN - MAIN WIDGET
@@ -129,8 +130,12 @@ class _UploadScreenState extends State<UploadScreen> {
       );
 
       debugPrint('✅ File encrypted');
-      debugPrint('   IV: ${encryptResult['iv'].toString().substring(0, 20)}...');
-      debugPrint('   Auth Tag: ${encryptResult['authTag'].toString().substring(0, 20)}...');
+      debugPrint(
+        '   IV: ${encryptResult['iv'].toString().substring(0, 20)}...',
+      );
+      debugPrint(
+        '   Auth Tag: ${encryptResult['authTag'].toString().substring(0, 20)}...',
+      );
 
       setState(() {
         isEncrypting = false;
@@ -140,12 +145,27 @@ class _UploadScreenState extends State<UploadScreen> {
       });
 
       // Step 3: Upload to server
+      final userService = UserService();
+      final accessToken = await userService.getAccessToken();
+
+      if (accessToken == null) {
+        throw Exception('Not authenticated. Please login again.');
+      }
+
+      // Prompt for owner ID
+      final ownerId = await _promptForOwnerId();
+      if (ownerId == null || ownerId.isEmpty) {
+        throw Exception('Owner selection required');
+      }
+
       await uploadEncryptedFile(
         encryptedData: encryptResult['encrypted'] as Uint8List,
         ivVector: encryptResult['iv'] as Uint8List,
         authTag: encryptResult['authTag'] as Uint8List,
         fileName: selectedFileName!,
         fileMimeType: _getMimeType(selectedFileName!),
+        accessToken: accessToken,
+        ownerId: ownerId,
       );
 
       debugPrint('✅ Upload complete');
@@ -170,6 +190,8 @@ class _UploadScreenState extends State<UploadScreen> {
     required Uint8List authTag,
     required String fileName,
     required String fileMimeType,
+    required String accessToken,
+    required String ownerId,
   }) async {
     try {
       final uploadUri = Uri.parse('$apiBaseUrl/api/upload');
@@ -180,10 +202,14 @@ class _UploadScreenState extends State<UploadScreen> {
       // Create multipart request
       final request = http.MultipartRequest('POST', uploadUri);
 
+      // Add JWT authorization header
+      request.headers['Authorization'] = 'Bearer $accessToken';
+
       // Add form fields
       request.fields['file_name'] = fileName;
       request.fields['iv_vector'] = base64Encode(ivVector);
       request.fields['auth_tag'] = base64Encode(authTag);
+      request.fields['owner_id'] = ownerId;
 
       // Add file
       request.files.add(
@@ -238,6 +264,40 @@ class _UploadScreenState extends State<UploadScreen> {
   }
 
   // ========================================
+  // PROMPT FOR OWNER ID
+  // ========================================
+
+  Future<String?> _promptForOwnerId() async {
+    String? ownerId;
+
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Owner'),
+        content: TextField(
+          decoration: const InputDecoration(
+            labelText: 'Owner ID or Email',
+            hintText: 'e.g., owner@example.com',
+          ),
+          onChanged: (value) => ownerId = value.isEmpty ? null : value,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: ownerId != null && ownerId!.isNotEmpty
+                ? () => Navigator.pop(context, ownerId)
+                : null,
+            child: const Text('Select'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ========================================
   // GET MIME TYPE
   // ========================================
 
@@ -246,11 +306,14 @@ class _UploadScreenState extends State<UploadScreen> {
     final mimeTypes = {
       'pdf': 'application/pdf',
       'doc': 'application/msword',
-      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'docx':
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'xls': 'application/vnd.ms-excel',
-      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'xlsx':
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'ppt': 'application/vnd.ms-powerpoint',
-      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'pptx':
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       'txt': 'text/plain',
       'jpg': 'image/jpeg',
       'jpeg': 'image/jpeg',
@@ -293,10 +356,7 @@ class _UploadScreenState extends State<UploadScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    'File: $fileName',
-                    style: const TextStyle(fontSize: 12),
-                  ),
+                  Text('File: $fileName', style: const TextStyle(fontSize: 12)),
                   const SizedBox(height: 4),
                   const Text(
                     'Share this ID with the owner:',
@@ -331,7 +391,11 @@ class _UploadScreenState extends State<UploadScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, size: 16, color: Colors.amber.shade700),
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: Colors.amber.shade700,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -446,11 +510,7 @@ class _UploadScreenState extends State<UploadScreen> {
                 ),
                 child: Column(
                   children: [
-                    Icon(
-                      Icons.security,
-                      size: 48,
-                      color: Colors.blue.shade600,
-                    ),
+                    Icon(Icons.security, size: 48, color: Colors.blue.shade600),
                     const SizedBox(height: 12),
                     const Text(
                       'Secure File Upload',
@@ -462,10 +522,7 @@ class _UploadScreenState extends State<UploadScreen> {
                     const SizedBox(height: 8),
                     const Text(
                       'Your file will be encrypted before uploading',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -642,10 +699,7 @@ class _UploadScreenState extends State<UploadScreen> {
                           const SizedBox(height: 8),
                           const Text(
                             'Your file is encrypted and stored on the server.',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
+                            style: TextStyle(fontSize: 14, color: Colors.grey),
                           ),
                           const SizedBox(height: 16),
                           Container(
@@ -697,10 +751,7 @@ class _UploadScreenState extends State<UploadScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.error_outline,
-                            color: Colors.red.shade600,
-                          ),
+                          Icon(Icons.error_outline, color: Colors.red.shade600),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
